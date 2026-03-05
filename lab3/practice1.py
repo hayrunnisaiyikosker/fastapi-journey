@@ -17,7 +17,7 @@ books = [
 # - title
 # - author
 # - year
-class books (BaseModel):
+class Book (BaseModel):
     title: str
     author: str
     year: int
@@ -25,7 +25,7 @@ class books (BaseModel):
 # TODO: Define a GET endpoint receiving the id and use the response model
 # Use the URL: /books/{book_id}
     # Finding the book in books
-@app.get("/books/{book_id}", response_model = books)
+@app.get("/books/{book_id}", response_model = Book)
 async def read_book(book_id: int):
     for book in books:
         if book["id"] == book_id:
