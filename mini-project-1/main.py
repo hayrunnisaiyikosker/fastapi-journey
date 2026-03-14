@@ -20,11 +20,49 @@ async def get_books():
     return books
 
 @app.get ("/books/{book_id}")
-async def get_book(book_id: int):
+async def get_book(book_id:int):
     await asyncio.sleep(1)
 
     for book in books:
         if book["book_id"] == book_id:
             return book
     return {"message": "Book not found"}
+
+@app.post ("/books/")
+async def add_book(book:Book):
+    book_id = max(c["book_id"] for c in books) + 1 if books else 1
+
+    new_book = {
+        "book_id": book_id,
+        "title": book.title,
+        "author": book.author,
+        "page_count": book.page_count,
+        "borrow_records": book.borrow_records
+    }
+    
+    books.append (new_book)
+    return {"message": "New book added successfully", "details": new_book}
+
+@app.put ("/books/{book_id}")
+async def update_book(book_id:int, updated_book:Book):
+    for book in books:
+        if book["book_id"] == book_id:
+
+            book["title"] = updated_book.title
+            book["author"] = updated_book.author
+            book["page_count"] = updated_book.page_count
+            book["borrow_records"] = updated_book.borrow_records
+
+            return {"message": "Book updated successfully", "book": book}
+    
+    return {"message": "Book not found"}
+
+@app.delete ("/books/{book_id}")
+async def delete_book(book_id:int):
+    for book in books:
+        if book["book_id"] == book_id:
+            books.remove(book)
+            return {"message": "Book deleted successfully"}
         
+    return {"message": "Book not found"}
+    
