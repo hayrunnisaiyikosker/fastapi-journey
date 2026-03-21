@@ -1,8 +1,12 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from models import Book
 import asyncio
 
 book_router = APIRouter()
+
+templates = Jinja2Templates(directory="templates")
 
 #Mock database of book
 books = [
@@ -14,7 +18,24 @@ books = [
     {"book_id":7, "title": "Frankestein", "author": "Mary Shelley", "page_count": 280, "borrow_records": []}
 ]
 
+@book_router.get("/home", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse("home.html", {
+        "request": request,
+        "books": books
+    })
 
+
+@book_router.get("/book/{id}", response_class=HTMLResponse)
+async def get_book_page(request: Request, id: int):
+    for book in books:
+        if book["book_id"] == id:
+            return templates.TemplateResponse ("book.html", {
+                "request": request,
+                "book": book 
+            })
+    raise HTTPExpception(status_code=404, detail=f"Book with ID {id} was not found")
+    
 @book_router.get ("/books/")
 async def get_books():
     return books
@@ -30,6 +51,7 @@ async def get_book(book_id:int):
         status_code=404,
         detail=f"Book with ID {book_id} was not found"
     )
+    
 
 @book_router.post ("/books/")
 async def add_book(book:Book):
@@ -54,7 +76,9 @@ async def update_book(book_id:int, updated_book:Book):
             book["author"] = updated_book.author
             book["page_count"] = updated_book.page_count
             book["borrow_records"] = updated_book.borrow_records
+
             return {"message": "Book updated successfully", "book": book}
+    
     raise HTTPException(
         status_code=404,
         detail=f"Book with ID {book_id} was not found"
@@ -68,7 +92,7 @@ async def delete_book(book_id:int):
             return {"message": "Book deleted successfully"}
         
     raise HTTPException(
-        status_code=404,
+        code_status=404,
         detail=f"Book with ID {book_id} was not found"
     )
     
