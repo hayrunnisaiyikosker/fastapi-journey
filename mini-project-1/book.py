@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from models import Book
 import asyncio
 
@@ -27,7 +27,6 @@ async def get_book(book_id:int):
         if book["book_id"] == book_id:
             return book
     return {"message": "Book not found"}
-    
 
 @book_router.post ("/books/")
 async def add_book(book:Book):
@@ -52,8 +51,8 @@ async def update_book(book_id:int, updated_book:Book):
             book["author"] = updated_book.author
             book["page_count"] = updated_book.page_count
             book["borrow_records"] = updated_book.borrow_records
-
-            return {"message": "Book not found"}
+            return {"message": "Book updated successfully", "book": book}
+    return {"message": "Book not found"}
 
 @book_router.delete ("/books/{book_id}")
 async def delete_book(book_id:int):
