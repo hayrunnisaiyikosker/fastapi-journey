@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from models import Book
 import asyncio
 
@@ -26,7 +26,10 @@ async def get_book(book_id:int):
     for book in books:
         if book["book_id"] == book_id:
             return book
-    return {"message": "Book not found"}
+    raise HTTPException(
+        status_code=404,
+        detail=f"Book with ID {book_id} was not found"
+    )
 
 @book_router.post ("/books/")
 async def add_book(book:Book):
@@ -52,7 +55,10 @@ async def update_book(book_id:int, updated_book:Book):
             book["page_count"] = updated_book.page_count
             book["borrow_records"] = updated_book.borrow_records
             return {"message": "Book updated successfully", "book": book}
-    return {"message": "Book not found"}
+    raise HTTPException(
+        status_code=404,
+        detail=f"Book with ID {book_id} was not found"
+    )
 
 @book_router.delete ("/books/{book_id}")
 async def delete_book(book_id:int):
@@ -61,5 +67,8 @@ async def delete_book(book_id:int):
             books.remove(book)
             return {"message": "Book deleted successfully"}
         
-    return {"message": "Book not found"}
+    raise HTTPException(
+        status_code=404,
+        detail=f"Book with ID {book_id} was not found"
+    )
     
