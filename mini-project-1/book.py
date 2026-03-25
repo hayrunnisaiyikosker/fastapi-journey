@@ -3,23 +3,19 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from models import Book
 import asyncio
+from database import managed_db
 
 book_router = APIRouter()
 
 templates = Jinja2Templates(directory="templates")
 
 #Mock database of book
-books = [
-    {"book_id":1, "title": "Animal Farm", "author": "George Orwell", "page_count": 112, "borrow_records": []},
-    {"book_id":2, "title": "To Kill a Mockingbird", "author": "Harper Lee", "page_count": 336, "borrow_records": []},
-    {"book_id":3, "title": "War And Peace", "author": "Leo Tolstoy", "page_count": 1225, "borrow_records": []},
-    {"book_id":4, "title": "The Trial", "author": "Franz Kafka", "page_count": 225, "borrow_records": []},
-    {"book_id":5, "title": "Les Miserables", "author": "Victor Hugo", "page_count": 1463, "borrow_records": []},
-    {"book_id":7, "title": "Frankestein", "author": "Mary Shelley", "page_count": 280, "borrow_records": []}
-]
+
 
 @book_router.get("/home", response_class=HTMLResponse)
 async def home(request: Request):
+    with managed_db() as db:
+        books = db.get_all()
     return templates.TemplateResponse("home.html", {
         "request": request,
         "books": books
@@ -28,71 +24,53 @@ async def home(request: Request):
 
 @book_router.get("/book/{id}", response_class=HTMLResponse)
 async def get_book_page(request: Request, id: int):
-    for book in books:
-        if book["book_id"] == id:
-            return templates.TemplateResponse ("book.html", {
-                "request": request,
-                "book": book 
-            })
-    raise HTTPExpception(status_code=404, detail=f"Book with ID {id} was not found")
+    with managed_db() as db:
+        book = db.get(id)
+    if not book:
+        raise HTTPException(status_code=404, detail=f"Book with ID {id} was not found")
+    return templates.TemplateResponse("book.html", {
+        "request": request,
+        "book": book
+    })
+    
     
 @book_router.get ("/books/")
 async def get_books():
-    return books
+    with managed_db() as db:
+        return db.get_all()
 
 @book_router.get ("/books/{book_id}")
 async def get_book(book_id:int):
     await asyncio.sleep(1)
-
-    for book in books:
-        if book["book_id"] == book_id:
-            return book
-    raise HTTPException(
-        status_code=404,
-        detail=f"Book with ID {book_id} was not found"
-    )
+    with managed_db() as db:
+        book = db.get(book_id)
+    if not book:
+        raise HTTPException(status_code=404, detail=f"Book with ID {book_id} was not found")
+    return book
     
 
 @book_router.post ("/books/")
 async def add_book(book:Book):
-    book_id = max(c["book_id"] for c in books) + 1 if books else 1
-
-    new_book = {
-        "book_id": book_id,
-        "title": book.title,
-        "author": book.author,
-        "page_count": book.page_count,
-        "borrow_records": book.borrow_records
-    }
-    
-    books.append (new_book)
+    with managed_db() as db:
+        new_id = db.create(book)
+        new_book = db.get(new_id)
     return {"message": "New book added successfully", "details": new_book}
+
 
 @book_router.put ("/books/{book_id}")
 async def update_book(book_id:int, updated_book:Book):
-    for book in books:
-        if book["book_id"] == book_id:
-            book["title"] = updated_book.title
-            book["author"] = updated_book.author
-            book["page_count"] = updated_book.page_count
-            book["borrow_records"] = updated_book.borrow_records
-
-            return {"message": "Book updated successfully", "book": book}
-    
-    raise HTTPException(
-        status_code=404,
-        detail=f"Book with ID {book_id} was not found"
-    )
+    with managed_db() as db:
+        book = db.update(book_id, updated_book)
+    if not book:
+        raise HTTPException(status_code=404, detail=f"Book with ID {book_id} was not found")
+    return {"message": "Book updated successfully", "book": book}
 
 @book_router.delete ("/books/{book_id}")
 async def delete_book(book_id:int):
-    for book in books:
-        if book["book_id"] == book_id:
-            books.remove(book)
-            return {"message": "Book deleted successfully"}
-        
-    raise HTTPException(
-        code_status=404,
-        detail=f"Book with ID {book_id} was not found"
-    )
+    with managed_db() as db:
+        book = db.get(book_id)
+        if not book:
+            raise HTTPException(status_code=404, detail=f"Book with ID {book_id} was not found")
+        db.delete(book_id)
+    return {"message": "Book deleted successfully"}
     
