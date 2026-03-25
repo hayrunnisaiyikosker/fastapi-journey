@@ -35,3 +35,15 @@
 | `PUT` | `/books/{book_id}` | Updates an existing book |
 | `DELETE` | `/books/{book_id}` | deletes a book |
 
+## Database 
+
+### What is the '@contextmanager' and why we are using it here instead of a plain function?
+`@contextmanager` is a decorator that makes a generator function usable
+within a `with` block. In the `managed_db()` function, we expose the database connection
+using `yield db`; when the `with` block ends, `db.close()` within the `finally` block runs automatically. If we had used a plain function, we would have had to manually write the `close()` call in every endpoint, and the connection would not close if an exception occurred.
+
+### What does `check_same_thread=False` do, and why is it necessary in FastAPI?
+By default, SQLite only allows the connection to be used by the thread that opened it. However, due to its asynchronous nature, FastAPI can process requests in different threads. Without `check_same_thread=False`, FastAPI throws an error when attempting to access the SQLite connection from a different thread. This setting removes that restriction.
+
+### What happens to the data when the server restarts — a comparison with the old SQLite list?
+The old mock list (`books = [...]`) was kept in memory. When the server shut down, all changes (books added, deleted, or updated) were lost, and the list was reloaded from scratch each time. With SQLite, data is written to the `sqlite.db` file. Even if the server restarts, the data remains in the file; nothing is lost.
