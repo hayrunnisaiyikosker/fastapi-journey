@@ -1,22 +1,29 @@
 from beanie import init_beanie, Document, PydanticObjectId
 from motor.motor_asyncio import AsyncIOMotorClient
 from typing import Optional, List, Any
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from models.events import Event
 from models.users import User
 from pydantic import BaseModel
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 class Settings(BaseSettings):
-    DATABASE_URL: Optional[str] = None
-    
-    class Config:
-        env_file = ".env"
+    DATABASE_URL: str = "mongodb://localhost:27017/planner"
+
+    model_config = SettingsConfigDict(
+        env_file=str(BASE_DIR / ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
 
     async def initialize_database(self):
         client = AsyncIOMotorClient(self.DATABASE_URL)
+        db_name = self.DATABASE_URL.split("/")[-1]
         await init_beanie(
-            database = client.get_default_database(),
-            document_models = [Event, User]
+            database=client[db_name],
+            document_models=[Event, User]
         )
 
 class Database:
@@ -48,7 +55,7 @@ class Database:
         return doc
     
     async def delete(self, id: PydanticObjectId) -> bool:
-        doc =await self.get(id)
+        doc = await self.get(id)
         if not doc:
             return False
         await doc.delete()
