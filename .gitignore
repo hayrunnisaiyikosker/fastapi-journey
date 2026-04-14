@@ -6,3 +6,5 @@ mini-project-1/__pycache__/
 mini-project-2/venv/
 mini-project-2/store/
 .env
+mini-project-2/mongo-data/
+mini-project-2/__pycache__/
