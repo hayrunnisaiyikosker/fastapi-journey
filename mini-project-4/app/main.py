@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from app.models import Poll, PollCreate
 import uuid
-
+from fastapi.responses import HTMLResponse
 app = FastAPI()
 
 
@@ -45,3 +45,49 @@ def delete_poll(poll_id: str):
         raise HTTPException(status_code=404, detail="Poll not found")
     del polls_db[poll_id]
     return {"message": "Poll deleted"}
+
+from fastapi import WebSocket, WebSocketDisconnect
+from app.manager import ConnectionManager
+
+manager = ConnectionManager()
+
+@app.websocket("/ws/polls/{poll_id}")
+async def websocket_endpoint(websocket: WebSocket, poll_id: str):
+    await manager.connect(poll_id, websocket)
+
+    if poll_id in polls_db:
+        poll = polls_db[poll_id]
+        await websocket.send_json({
+            "question": poll.question,
+            "votes": poll.votes
+        })
+    
+    try:
+        while True:
+            data = await websocket.receive_json()
+            option = data.get("option")
+
+            if poll_id not in polls_db:
+                await websocket.send_json({"error": "Poll not found"})
+                continue
+
+            poll = polls_db[poll_id]
+
+            if option not in poll.votes:
+                await websocket.send_json({"error": "Invalid Options"})
+                continue
+
+            poll.votes[option] += 1
+
+            await manager.broadcast(poll_id, {
+                "question": poll.question,
+                "votes": poll.votes
+            })
+
+    except WebSocketDisconnect:
+        manager.disconnect(poll_id, websocket)
+
+@app.get("/test", response_class=HTMLResponse)
+async def test_page():
+    with open("test.html", "r", encoding="utf-8") as f:
+        return f.read()

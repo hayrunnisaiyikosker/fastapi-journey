@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h2 id="question">Connecting...</h2>
+    <div id="results"></div>
+    <br>
+    <input id="option" placeholder="Enter option (Python, JavaScript, Java)" style="width:300px">
+    <button onclick="vote()">Vote</button>
+
+    <script>
+        const POLL_ID = "2aaccdfb-8ab4-4cfc-895a-e5772f6c6507";
+        
+        const ws = new WebSocket(`ws://localhost:8000/ws/polls/${POLL_ID}`);
+
+        ws.onopen = () => {
+            document.getElementById("question").textContent = "Connected! ✅";
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            document.getElementById("question").textContent = data.question;
+            
+            let html = "";
+            for (const [option, count] of Object.entries(data.votes)) {
+                html += `<p>${option}: ${count} votes</p>`;
+            }
+            document.getElementById("results").innerHTML = html;
+        };
+
+        function vote() {
+            const option = document.getElementById("option").value;
+            ws.send(JSON.stringify({ option: option }));
+        }
+    </script>
+</body>
+</html>
